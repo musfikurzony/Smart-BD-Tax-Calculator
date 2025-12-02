@@ -1,0 +1,247 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bangladesh — Income Tax Calculator (Jul→Jun) — corrected</title>
+  <style>
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans',Arial;margin:18px;color:#0b1220}
+    h1{font-size:20px;margin-bottom:6px}
+    label{display:block;margin-top:10px;font-weight:600}
+    input[type=number],input[type=text]{width:260px;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #ccc}
+    .row{display:flex;gap:12px;align-items:center}
+    button{margin-top:12px;padding:10px 14px;border-radius:8px;border:0;background:#0b74de;color:white;font-weight:700}
+    .out{margin-top:14px;padding:12px;border-radius:8px;background:#f5f7fb;border:1px solid #e1e6f3}
+    table{width:100%;border-collapse:collapse;margin-top:10px}
+    td,th{padding:8px;border-bottom:1px solid #e9eef8;text-align:left}
+    .muted{color:#6b7280;font-size:13px}
+    small{color:#6b7280}
+    .box{margin-top:18px;padding:12px;border-radius:10px;background:#fff;border:1px solid #e6eef8}
+    .half{width:48%;display:inline-block;vertical-align:top}
+    .mono{font-family:monospace}
+  </style>
+</head>
+<body>
+  <h1>Bangladesh — Income Tax Calculator (Jul→Jun) — corrected</h1>
+  <p class="muted">This corrected version ensures <strong>Employer PF is INCLUDED in taxable income</strong> while <strong>Employee PF is NOT included in taxable income</strong>. Monthly tax rounding follows HR practice (monthly provisional tax = round(provisional_net_tax/12)).</p>
+
+  <!-- Inputs -->
+  <div class="box">
+    <div class="half">
+      <label>Monthly gross (Jul→Jan) — 7 months</label>
+      <input id="gross_juljan" type="number" value="224219">
+
+      <label>Monthly gross (Feb→Jun) — 5 months</label>
+      <input id="gross_febjun" type="number" value="224219">
+
+      <label>13th month salary (Dec)</label>
+      <input id="salary_13th" type="number" value="224219">
+
+      <label>Performance bonus (Feb)</label>
+      <input id="bonus_feb" type="number" value="0">
+
+      <label>Employer PF rate (%)</label>
+      <input id="employer_pf_pct" type="number" value="5">
+
+      <label>Employee PF rate (%) (deducted before tax)</label>
+      <input id="employee_pf_pct" type="number" value="5">
+
+      <label>Planned personal investment (sum you plan to declare)</label>
+      <input id="planned_investment" type="number" value="509876">
+    </div>
+
+    <div class="half">
+      <h3 style="margin-top:0">Investment inputs (for rebate calc)</h3>
+      <label>DPS (yearly amount)</label>
+      <input id="inv_dps" type="number" value="0">
+      <label>Share / Mutual Fund (yearly)</label>
+      <input id="inv_share" type="number" value="0">
+      <label>Other eligible investments (yearly)</label>
+      <input id="inv_other" type="number" value="0">
+
+      <h3 style="margin-bottom:6px">Editable tax slabs</h3>
+      <label>Zero-tax limit (editable)</label>
+      <input id="slab0" type="number" value="375000">
+      <label>Slab1 limit (next)</label>
+      <input id="slab1" type="number" value="300000">
+      <label>Slab2 limit</label>
+      <input id="slab2" type="number" value="400000">
+      <label>Slab3 limit</label>
+      <input id="slab3" type="number" value="500000">
+      <label>Slab4 limit</label>
+      <input id="slab4" type="number" value="2000000">
+
+      <small class="muted">Rates are set in script as 0%,10%,15%,20%,25%,30% (editable in code if needed).</small>
+    </div>
+  </div>
+
+  <div class="row"><button id="calc">Calculate</button><button id="reset" style="background:#94a3b8">Reset</button></div>
+
+  <!-- Results -->
+  <div id="results" class="out" style="display:none">
+    <h3>Summary</h3>
+    <div id="summary"></div>
+
+    <h3 style="margin-top:10px">Detailed Breakdown</h3>
+    <table id="table" role="table"></table>
+
+    <h3 style="margin-top:12px">Investment Planner</h3>
+    <div id="investments" class="box"></div>
+  </div>
+
+<script>
+function format(x){return Number(Math.round(x)||0).toLocaleString('en-BD');}
+
+function loadSlabs(){
+  return [
+    {limit:Number(document.getElementById('slab0').value||0), rate:0},
+    {limit:Number(document.getElementById('slab1').value||0), rate:0.10},
+    {limit:Number(document.getElementById('slab2').value||0), rate:0.15},
+    {limit:Number(document.getElementById('slab3').value||0), rate:0.20},
+    {limit:Number(document.getElementById('slab4').value||0), rate:0.25},
+    {limit:Infinity, rate:0.30}
+  ];
+}
+
+function computeTaxOnAmount(taxable, slabs){
+  let remaining = taxable; let tax = 0;
+  for(let i=0;i<slabs.length;i++){
+    const band = slabs[i];
+    const bandAmt = Math.min(remaining, band.limit);
+    if(bandAmt<=0) continue;
+    tax += bandAmt * band.rate;
+    remaining -= bandAmt;
+  }
+  return tax;
+}
+
+function runCalc(){
+  const slabs = loadSlabs();
+  const gross_juljan = Number(document.getElementById('gross_juljan').value||0);
+  const gross_febjun = Number(document.getElementById('gross_febjun').value||0);
+  const salary_13th = Number(document.getElementById('salary_13th').value||0);
+  const bonus_feb = Number(document.getElementById('bonus_feb').value||0);
+  const employer_pf_pct = Number(document.getElementById('employer_pf_pct').value||0)/100;
+  const employee_pf_pct = Number(document.getElementById('employee_pf_pct').value||0)/100;
+  const planned_investment = Number(document.getElementById('planned_investment').value||0);
+  const inv_dps = Number(document.getElementById('inv_dps').value||0);
+  const inv_share = Number(document.getElementById('inv_share').value||0);
+  const inv_other = Number(document.getElementById('inv_other').value||0);
+
+  const months_juljan = 7, months_febjun = 5;
+  const income_juljan = gross_juljan * months_juljan;
+  const income_febjun = gross_febjun * months_febjun;
+  const income_basic_total = income_juljan + income_febjun;
+
+  // Employer PF and Employee PF totals (year)
+  const employer_pf_juljan = gross_juljan * employer_pf_pct * months_juljan;
+  const employer_pf_febjun = gross_febjun * employer_pf_pct * months_febjun;
+  const employer_pf_total = employer_pf_juljan + employer_pf_febjun;
+
+  const employee_pf_juljan = gross_juljan * employee_pf_pct * months_juljan;
+  const employee_pf_febjun = gross_febjun * employee_pf_pct * months_febjun;
+  const employee_pf_total = employee_pf_juljan + employee_pf_febjun;
+
+  // Total income considered for tax: INCLUDE employer PF, EXCLUDE employee PF
+  const total_income = income_basic_total + employer_pf_total + salary_13th + bonus_feb;
+
+  // Exemption
+  const exemption_limit = 500000; // default
+  const exemption = Math.min(total_income/3, exemption_limit);
+  const taxable_income = Math.max(0, total_income - exemption);
+
+  // Gross tax using editable slabs
+  const gross_tax = computeTaxOnAmount(taxable_income, slabs);
+
+  // Investment calculations: eligible investments include employee+employer PF + DPS + shares + other + planned_investment
+  const total_user_invest = planned_investment + inv_dps + inv_share + inv_other;
+  const total_eligible_invest = total_user_invest + employee_pf_total + employer_pf_total; // both PF portions count as investment for rebate
+
+  const rebate_a = 0.03 * taxable_income;
+  const rebate_b = 0.15 * total_eligible_invest;
+  const rebate_cap = 1000000;
+  const investment_rebate = Math.min(rebate_a, rebate_b, rebate_cap);
+
+  const net_tax = Math.max(0, gross_tax - investment_rebate);
+
+  // === Provisional calculation (Jul->Jan) ===
+  // Provisional uses gross_juljan assumed for full year and employer PF based on that. Employee PF is NOT included in income.
+  const provisional_income_basic12 = gross_juljan * 12;
+  const provisional_employer_pf12 = gross_juljan * employer_pf_pct * 12;
+  const provisional_total_income = provisional_income_basic12 + provisional_employer_pf12 + salary_13th; // no bonus in provisional
+  const provisional_exemption = Math.min(provisional_total_income/3, exemption_limit);
+  const provisional_taxable = Math.max(0, provisional_total_income - provisional_exemption);
+  const provisional_gross_tax = computeTaxOnAmount(provisional_taxable, slabs);
+
+  // Provisional rebate: use qualifying investment estimate where PF for 12 months for employee+employer (employee PF not added to income but counts for investment)
+  const provisional_employee_pf12 = gross_juljan * employee_pf_pct * 12;
+  const provisional_employer_pf12_forinv = provisional_employer_pf12;
+  const provisional_total_eligible_invest = total_user_invest + provisional_employee_pf12 + provisional_employer_pf12_forinv;
+  const provisional_rebate = Math.min(0.03*provisional_taxable, 0.15*provisional_total_eligible_invest, rebate_cap);
+  const provisional_net_tax = Math.max(0, provisional_gross_tax - provisional_rebate);
+
+  // HR monthly tax for full year (provisional) = provisional_net_tax/12 rounded to nearest Taka
+  const monthly_tax_provisional = Math.round(provisional_net_tax / 12);
+  // Tax actually deducted in Jul->Jan (7 months) using rounded monthly figure
+  const tax_deducted_juljan_total = monthly_tax_provisional * months_juljan;
+
+  // Final calculation after Feb (includes higher gross_febjun and bonus)
+  const final_net_tax = Math.round(net_tax); // round annual net tax to integer
+  const remaining_tax_to_collect = Math.max(0, final_net_tax - tax_deducted_juljan_total);
+  const monthly_tax_febjun = Math.round(remaining_tax_to_collect / months_febjun);
+
+  // Monthly employer & employee PF
+  const monthly_employer_pf_juljan = gross_juljan * employer_pf_pct;
+  const monthly_employer_pf_febjun = gross_febjun * employer_pf_pct;
+  const monthly_employee_pf_juljan = gross_juljan * employee_pf_pct;
+  const monthly_employee_pf_febjun = gross_febjun * employee_pf_pct;
+
+  // Net to bank per month: gross - employee PF (this is taken first) - monthly tax (next)
+  const monthly_net_bank_juljan = gross_juljan - Math.round(monthly_employee_pf_juljan) - monthly_tax_provisional;
+  const monthly_net_bank_febjun = gross_febjun - Math.round(monthly_employee_pf_febjun) - monthly_tax_febjun;
+
+  // Totals
+  const total_tax_deducted = tax_deducted_juljan_total + (monthly_tax_febjun * months_febjun);
+  const total_employee_pf = employee_pf_total;
+  const total_employer_pf = employer_pf_total;
+
+  // Investment top-up needed to reach rebate_a via 15% rule
+  const required_invest_for_rebateA = rebate_a / 0.15; // amount of qualifying investment required
+  const topup_needed = Math.max(0, required_invest_for_rebateA - total_eligible_invest);
+
+  // Render summary
+  document.getElementById('results').style.display = 'block';
+  document.getElementById('summary').innerHTML = `
+    <strong>Total income (12m salary + employer PF + 13th + bonus):</strong> Tk ${format(total_income)}<br>
+    <strong>Exemption applied:</strong> Tk ${format(exemption)}<br>
+    <strong>Taxable income:</strong> Tk ${format(taxable_income)}<br>
+    <strong>Gross tax (before rebate):</strong> Tk ${format(gross_tax)}<br>
+    <strong>Investment rebate applied (est):</strong> Tk ${format(investment_rebate)}<br>
+    <strong>Net annual tax (final):</strong> Tk ${format(net_tax)}
+  `;
+
+  // Render detailed table
+  const table = document.getElementById('table');
+  table.innerHTML = `
+    <tr><th>Item</th><th>Jul→Jan (7m)</th><th>Feb→Jun (5m)</th><th>Annual / Notes</th></tr>
+    <tr><td>Monthly gross</td><td>Tk ${format(gross_juljan)}</td><td>Tk ${format(gross_febjun)}</td><td>—</td></tr>
+    <tr><td>Months</td><td>7</td><td>5</td><td>12</td></tr>
+    <tr><td>Total gross (period)</td><td>Tk ${format(income_juljan)}</td><td>Tk ${format(income_febjun)}</td><td>Tk ${format(income_basic_total)}</td></tr>
+    <tr><td>Monthly employer PF</td><td>Tk ${format(Math.round(monthly_employer_pf_juljan))}</td><td>Tk ${format(Math.round(monthly_employer_pf_febjun))}</td><td>Employer PF total Tk ${format(total_employer_pf)}</td></tr>
+    <tr><td>Employer PF total (period)</td><td>Tk ${format(Math.round(employer_pf_juljan))}</td><td>Tk ${format(Math.round(employer_pf_febjun))}</td><td>Tk ${format(total_employer_pf)}</td></tr>
+    <tr><td>Monthly employee PF (deducted)</td><td>Tk ${format(Math.round(monthly_employee_pf_juljan))}</td><td>Tk ${format(Math.round(monthly_employee_pf_febjun))}</td><td>Employee PF total Tk ${format(total_employee_pf)}</td></tr>
+    <tr><td>Monthly tax deducted</td><td>Tk ${format(monthly_tax_provisional)}</td><td>Tk ${format(monthly_tax_febjun)}</td><td>Provisional monthly Tk ${format(monthly_tax_provisional)}</td></tr>
+    <tr><td>Tax total deducted / to be deducted</td><td>Tk ${format(tax_deducted_juljan_total)}</td><td>Tk ${format(Math.round(remaining_tax_to_collect))}</td><td>Final net tax Tk ${format(net_tax)}</td></tr>
+    <tr><td>Net salary (goes to bank) — per month</td><td>Tk ${format(monthly_net_bank_juljan)}</td><td>Tk ${format(monthly_net_bank_febjun)}</td><td>13th Tk ${format(salary_13th)}; Bonus Tk ${format(bonus_feb)}</td></tr>
+    <tr><td>Total tax actually (year)</td><td colspan="2">Tk ${format(Math.round(total_tax_deducted))}</td><td>Final net tax Tk ${format(net_tax)}</td></tr>
+    <tr><td>Investment rebate components</td><td colspan="2">3% of taxable Tk ${format(Math.round(rebate_a))} • 15% of qualifying investment Tk ${format(Math.round(0.15*total_eligible_invest))} • Cap Tk ${format(rebate_cap)}</td><td>Claimable rebate Tk ${format(Math.round(investment_rebate))}</td></tr>
+    <tr><td>Qualifying investments (incl. PF)</td><td colspan="3">Employee PF Tk ${format(total_employee_pf)} • Employer PF Tk ${format(total_employer_pf)} • DPS Tk ${format(inv_dps)} • Share Tk ${format(inv_share)} • Other Tk ${format(inv_other)} • Planned declared Tk ${format(planned_investment)} = <b>Tk ${format(total_eligible_invest)}</b></td></tr>
+    <tr><td>Top-up required to reach full rebate</td><td colspan="3">To satisfy 3% of taxable income via 15% rule you need qualifying investment ≈ Tk ${format(Math.round(required_invest_for_rebateA))}. Your current qualifying investment Tk ${format(total_eligible_invest)}. <b>Top-up needed Tk ${format(Math.round(topup_needed))}</b></td></tr>
+  `;
+}
+
+document.getElementById('calc').addEventListener('click', runCalc);
+document.getElementById('reset').addEventListener('click', ()=>location.reload());
+</script>
+</body>
+</html>
