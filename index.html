@@ -59,19 +59,20 @@
       <label>Other eligible investments (yearly)</label>
       <input id="inv_other" type="number" value="0">
 
-      <h3 style="margin-bottom:6px">Editable tax slabs</h3>
-      <label>Zero-tax limit (editable)</label>
-      <input id="slab0" type="number" value="375000">
-      <label>Slab1 limit (next)</label>
-      <input id="slab1" type="number" value="300000">
-      <label>Slab2 limit</label>
-      <input id="slab2" type="number" value="400000">
-      <label>Slab3 limit</label>
-      <input id="slab3" type="number" value="500000">
-      <label>Slab4 limit</label>
-      <input id="slab4" type="number" value="2000000">
-
-      <small class="muted">Rates are set in script as 0%,10%,15%,20%,25%,30% (editable in code if needed).</small>
+      <h3 style="margin-bottom:6px">Settings ⚙️</h3>
+<div id="settingsBox" style="padding:10px;border:1px solid #dde4ef;border-radius:8px;background:#f9fbfe">
+  <label>Zero-tax limit</label>
+  <input id="slab0" type="number" value="375000">
+  <label>Slab1 limit</label>
+  <input id="slab1" type="number" value="300000">
+  <label>Slab2 limit</label>
+  <input id="slab2" type="number" value="400000">
+  <label>Slab3 limit</label>
+  <input id="slab3" type="number" value="500000">
+  <label>Slab4 limit</label>
+  <input id="slab4" type="number" value="2000000">
+  <small class="muted">Rates are now editable under settings.</small>
+</div> in script as 0%,10%,15%,20%,25%,30% (editable in code if needed).</small>
     </div>
   </div>
 
@@ -87,6 +88,9 @@
 
     <h3 style="margin-top:12px">Investment Planner</h3>
     <div id="investments" class="box"></div>
+
+<h3 style="margin-top:14px">Investment Top‑up Summary</h3>
+<div id="topupBox" class="box" style="background:#fff6e8;border-color:#ffd9a6"></div>
   </div>
 
 <script>
@@ -210,6 +214,16 @@ function runCalc(){
   const topup_needed = Math.max(0, required_invest_for_rebateA - total_eligible_invest);
 
   // Render summary
+
+  // ===== Top‑up summary box =====
+  document.getElementById('topupBox').innerHTML = `
+    <b>Required qualifying investment:</b> Tk ${format(planned_investment)}<br>
+    <b>Total PF counted as investment:</b> Tk ${format(total_employee_pf + total_employer_pf)}<br>
+    <b>Other investments (DPS + Share + Other):</b> Tk ${format(inv_dps + inv_share + inv_other)}<br><br>
+    <b>Total eligible investment:</b> Tk ${format(total_eligible_invest)}<br>
+    <b>Required qualifying investment:</b> Tk ${format(Math.round(required_invest_for_rebateA))}<br>
+    <b style="color:#c30000">Additional top‑up needed:</b> <span style="color:#c30000;font-weight:700">Tk ${format(Math.round(topup_needed))}</span>
+  `;
   document.getElementById('results').style.display = 'block';
   document.getElementById('summary').innerHTML = `
     <strong>Total income (12m salary + employer PF + 13th + bonus):</strong> Tk ${format(total_income)}<br>
