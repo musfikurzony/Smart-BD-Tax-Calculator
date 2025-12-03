@@ -1,262 +1,346 @@
 <!doctype html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bangladesh — Income Tax Calculator (Jul→Jun) — corrected</title>
-  <style>
-    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans',Arial;margin:18px;color:#0b1220}
-    h1{font-size:20px;margin-bottom:6px}
-    label{display:block;margin-top:10px;font-weight:600}
-    input[type=number],input[type=text]{width:260px;padding:8px;margin-top:6px;border-radius:6px;border:1px solid #ccc}
-    .row{display:flex;gap:12px;align-items:center}
-    button{margin-top:12px;padding:10px 14px;border-radius:8px;border:0;background:#0b74de;color:white;font-weight:700}
-    .out{margin-top:14px;padding:12px;border-radius:8px;background:#f5f7fb;border:1px solid #e1e6f3}
-    table{width:100%;border-collapse:collapse;margin-top:10px}
-    td,th{padding:8px;border-bottom:1px solid #e9eef8;text-align:left}
-    .muted{color:#6b7280;font-size:13px}
-    small{color:#6b7280}
-    .box{margin-top:18px;padding:12px;border-radius:10px;background:#fff;border:1px solid #e6eef8}
-    .half{width:48%;display:inline-block;vertical-align:top}
-    .mono{font-family:monospace}
-  </style>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<title>BD Income Tax App — Jul→Jun (Final)</title>
+<style>
+  :root{--bg:#f6f8fb;--card:#ffffff;--muted:#6b7280;--accent:#0b74de;--danger:#c33}
+  [data-theme='dark']{--bg:#0b1220;--card:#0f1724;--muted:#9ca3af;--accent:#58a6ff;--danger:#ff8b8b;color:#e6eef8}
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,'Noto Sans',Arial;margin:0;background:var(--bg);color:inherit}
+  header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:var(--card);box-shadow:0 2px 6px rgba(2,6,23,0.06);border-bottom:1px solid rgba(0,0,0,0.04)}
+  h1{font-size:16px;margin:0}
+  .controls{display:flex;gap:8px;align-items:center}
+  .container{max-width:1100px;margin:14px auto;padding:12px}
+  .grid{display:grid;grid-template-columns:1fr;gap:12px}
+  @media(min-width:900px){.grid{grid-template-columns:360px 1fr}}
+  .card{background:var(--card);padding:12px;border-radius:12px;box-shadow:0 6px 18px rgba(2,6,23,0.04)}
+  label{font-weight:600;font-size:13px}
+  input[type=number],select{width:100%;padding:8px;border-radius:8px;border:1px solid #dbe6f3;margin-top:6px}
+  .row{display:flex;gap:10px;align-items:center}
+  .btn{background:var(--accent);color:#fff;padding:8px 12px;border-radius:8px;border:0;cursor:pointer}
+  .muted{color:var(--muted);font-size:13px}
+  .accordion{margin-top:8px}
+  .acc-head{display:flex;justify-content:space-between;align-items:center;padding:10px;border-radius:8px;cursor:pointer}
+  .acc-body{padding:10px;border-top:1px solid rgba(0,0,0,0.04)}
+  table{width:100%;border-collapse:collapse;margin-top:8px}
+  th,td{padding:8px;border-bottom:1px solid #eef3fb;text-align:left}
+  .success{color:green;font-weight:700}
+  .danger{color:var(--danger);font-weight:700}
+  .small{font-size:13px;color:var(--muted)}
+  footer{max-width:1100px;margin:12px auto;padding:12px;text-align:right}
+</style>
 </head>
-<body>
-  <h1>Bangladesh — Income Tax Calculator (Jul→Jun) — corrected</h1>
-  <p class="muted">This corrected version ensures <strong>Employer PF is INCLUDED in taxable income</strong> while <strong>Employee PF is NOT included in taxable income</strong>. Monthly tax rounding follows HR practice (monthly provisional tax = round(provisional_net_tax/12)).</p>
+<body data-theme="light">
+<header>
+  <h1>BD Income Tax App — Jul→Jun</h1>
+  <div class="controls">
+    <button id="darkToggle" title="Toggle dark mode" class="btn">🌙</button>
+    <button id="printBtn" class="btn">Export PDF</button>
+  </div>
+</header>
 
-  <!-- Inputs -->
-  <div class="box">
-    <div class="half">
-      <label>Monthly gross (Jul→Jan) — 7 months</label>
-      <input id="gross_juljan" type="number" value="224219">
+<div class="container">
+  <div class="grid">
+    <!-- LEFT: Inputs & settings -->
+    <div>
+      <div class="card">
+        <div class="acc-head" id="salaryHead"><div><strong>1. Salary & Bonus</strong><div class="small muted">Monthly values (Jul→Jan) and (Feb→Jun)</div></div><div>▼</div></div>
+        <div class="acc-body" id="salaryBody">
+          <label>Monthly gross (Jul→Jan) — 7 months</label>
+          <input id="gross_juljan" type="number" value="224219">
+          <label>Monthly gross (Feb→Jun) — 5 months</label>
+          <input id="gross_febjun" type="number" value="224219">
+          <label>13th month salary (Dec)</label>
+          <input id="salary_13th" type="number" value="224219">
+          <label>Performance bonus (Feb)</label>
+          <input id="bonus_feb" type="number" value="0">
+        </div>
+      </div>
 
-      <label>Monthly gross (Feb→Jun) — 5 months</label>
-      <input id="gross_febjun" type="number" value="224219">
+      <div class="card">
+        <div class="acc-head" id="pfHead"><div><strong>2. PF Contributions</strong><div class="small muted">Employee PF is deducted from salary (not taxable). Employer PF is included in taxable income.</div></div><div>▼</div></div>
+        <div class="acc-body" id="pfBody">
+          <label>Employer PF rate (%)</label>
+          <input id="employer_pf_pct" type="number" value="5">
+          <label>Employee PF rate (%)</label>
+          <input id="employee_pf_pct" type="number" value="5">
+        </div>
+      </div>
 
-      <label>13th month salary (Dec)</label>
-      <input id="salary_13th" type="number" value="224219">
+      <div class="card">
+        <div class="acc-head" id="invHead"><div><strong>3. Investment (DPS / Share / Other)</strong><div class="small muted">These add to qualifying investment. Employee+Employer PF are auto-added.</div></div><div>▼</div></div>
+        <div class="acc-body" id="invBody">
+          <label>Planned personal investment (declared)</label>
+          <input id="planned_investment" type="number" value="509876">
+          <label>DPS (yearly)</label>
+          <input id="inv_dps" type="number" value="0">
+          <label>Share / Mutual Fund (yearly)</label>
+          <input id="inv_share" type="number" value="0">
+          <label>Other eligible investments (yearly)</label>
+          <input id="inv_other" type="number" value="0">
+        </div>
+      </div>
 
-      <label>Performance bonus (Feb)</label>
-      <input id="bonus_feb" type="number" value="0">
+      <div class="card">
+        <div class="acc-head" id="settingsHead"><div><strong>⚙️ Settings (Tax slabs & rates)</strong><div class="small muted">Edit slab limits and rates — saved locally.</div></div><div>▼</div></div>
+        <div class="acc-body" id="settingsBody">
+          <label>Zero-tax limit</label>
+          <input id="slab0" type="number" value="375000">
+          <label>Slab1 limit</label>
+          <input id="slab1" type="number" value="300000">
+          <label>Slab2 limit</label>
+          <input id="slab2" type="number" value="400000">
+          <label>Slab3 limit</label>
+          <input id="slab3" type="number" value="500000">
+          <label>Slab4 limit</label>
+          <input id="slab4" type="number" value="2000000">
+          <label>Rates (comma separated for bands 0..n) e.g. 0,0.05,0.10,0.15,0.20,0.25,0.30</label>
+          <input id="ratesText" type="text" value="0,0.10,0.15,0.20,0.25,0.30">
+          <div class="row" style="margin-top:8px"><button id="saveSettings" class="btn">Save settings</button><button id="resetSettings" class="btn" style="background:#94a3b8">Reset defaults</button></div>
+        </div>
+      </div>
 
-      <label>Employer PF rate (%)</label>
-      <input id="employer_pf_pct" type="number" value="5">
-
-      <label>Employee PF rate (%) (deducted before tax)</label>
-      <input id="employee_pf_pct" type="number" value="5">
-
-      <label>Planned personal investment (sum you plan to declare)</label>
-      <input id="planned_investment" type="number" value="509876">
+      <div style="margin-top:10px" class="row"><button id="calc" class="btn">Calculate</button><button id="exportCsv" class="btn" style="background:#16a34a">Export CSV</button></div>
     </div>
 
-    <div class="half">
-      <h3 style="margin-top:0">Investment inputs (for rebate calc)</h3>
-      <label>DPS (yearly amount)</label>
-      <input id="inv_dps" type="number" value="0">
-      <label>Share / Mutual Fund (yearly)</label>
-      <input id="inv_share" type="number" value="0">
-      <label>Other eligible investments (yearly)</label>
-      <input id="inv_other" type="number" value="0">
+    <!-- RIGHT: Results & summaries -->
+    <div>
+      <div class="card">
+        <h3 style="margin-top:0">Investment Top‑up Summary</h3>
+        <div id="topupBox" class="small">(click Calculate)</div>
+      </div>
 
-      <h3 style="margin-bottom:6px">Settings ⚙️</h3>
-<div id="settingsBox" style="padding:10px;border:1px solid #dde4ef;border-radius:8px;background:#f9fbfe">
-  <label>Zero-tax limit</label>
-  <input id="slab0" type="number" value="375000">
-  <label>Slab1 limit</label>
-  <input id="slab1" type="number" value="300000">
-  <label>Slab2 limit</label>
-  <input id="slab2" type="number" value="400000">
-  <label>Slab3 limit</label>
-  <input id="slab3" type="number" value="500000">
-  <label>Slab4 limit</label>
-  <input id="slab4" type="number" value="2000000">
-  <small class="muted">Rates are now editable under settings.</small>
-</div> in script as 0%,10%,15%,20%,25%,30% (editable in code if needed).</small>
+      <div class="card">
+        <h3 style="margin-top:0">Final Tax Summary</h3>
+        <div id="summary">(click Calculate)</div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Monthly Tax Sheet — Jul → Jun</h3>
+        <div style="overflow:auto"><table id="monthTable"><thead><tr><th>Month</th><th>Gross</th><th>Emp PF</th><th>Employer PF</th><th>Tax</th><th>Net to Bank</th></tr></thead><tbody></tbody></table></div>
+      </div>
+
+      <div class="card">
+        <h3 style="margin-top:0">Notes & Actions</h3>
+        <div class="small muted">Use Export PDF to print the calculator results. Settings saved to your browser (localStorage).</div>
+      </div>
     </div>
   </div>
+</div>
 
-  <div class="row"><button id="calc">Calculate</button><button id="reset" style="background:#94a3b8">Reset</button></div>
-
-  <!-- Results -->
-  <div id="results" class="out" style="display:none">
-    <h3>Summary</h3>
-    <div id="summary"></div>
-
-    <h3 style="margin-top:10px">Detailed Breakdown</h3>
-    <table id="table" role="table"></table>
-
-    <h3 style="margin-top:12px">Investment Planner</h3>
-    <div id="investments" class="box"></div>
-
-<h3 style="margin-top:14px">Investment Top‑up Summary</h3>
-<div id="topupBox" class="box" style="background:#fff6e8;border-color:#ffd9a6"></div>
-  </div>
+<footer class="small muted">Made for you — Bangladesh rules (editable). You can toggle dark mode, save slab settings, export PDF/CSV.</footer>
 
 <script>
-function format(x){return Number(Math.round(x)||0).toLocaleString('en-BD');}
+// Helpers
+function $(id){return document.getElementById(id)}
+function toNum(v){return Number(v||0)}
+function fmt(x){return (Math.round(x)||0).toLocaleString('en-BD')}
 
-function loadSlabs(){
-  return [
-    {limit:Number(document.getElementById('slab0').value||0), rate:0},
-    {limit:Number(document.getElementById('slab1').value||0), rate:0.10},
-    {limit:Number(document.getElementById('slab2').value||0), rate:0.15},
-    {limit:Number(document.getElementById('slab3').value||0), rate:0.20},
-    {limit:Number(document.getElementById('slab4').value||0), rate:0.25},
-    {limit:Infinity, rate:0.30}
-  ];
+// Accordion toggles
+['salary','pf','inv','settings'].forEach(k=>{
+  const head=$(k+'Head'), body=$(k+'Body');
+  head.addEventListener('click', ()=>{ body.style.display = (body.style.display==='none')? 'block':'none'; });
+  body.style.display='block';
+});
+
+// Dark mode
+const darkToggle = $('darkToggle');
+function applyTheme(t){document.body.setAttribute('data-theme', t); localStorage.setItem('bd_theme', t); darkToggle.textContent = (t==='dark')? '☀️':'🌙'}
+const savedTheme = localStorage.getItem('bd_theme')||'light'; applyTheme(savedTheme);
+darkToggle.onclick = ()=> applyTheme((document.body.getAttribute('data-theme')==='dark')? 'light':'dark');
+
+// Settings persistence
+function loadSettings(){
+  const s = JSON.parse(localStorage.getItem('bd_settings')||'{}');
+  if(s.slab0) $('slab0').value=s.slab0; if(s.slab1) $('slab1').value=s.slab1; if(s.slab2) $('slab2').value=s.slab2; if(s.slab3) $('slab3').value=s.slab3; if(s.slab4) $('slab4').value=s.slab4; if(s.ratesText) $('ratesText').value=s.ratesText;
+}
+function saveSettings(){
+  const s = {slab0:$('slab0').value,slab1:$('slab1').value,slab2:$('slab2').value,slab3:$('slab3').value,slab4:$('slab4').value,ratesText:$('ratesText').value};
+  localStorage.setItem('bd_settings', JSON.stringify(s)); alert('Settings saved');
+}
+$('saveSettings').addEventListener('click', saveSettings);
+$('resetSettings').addEventListener('click', ()=>{ localStorage.removeItem('bd_settings'); location.reload(); });
+loadSettings();
+
+// Calculation core
+function loadSlabsAndRates(){
+  const limits=[toNum($('slab0').value),toNum($('slab1').value),toNum($('slab2').value),toNum($('slab3').value),toNum($('slab4').value)];
+  const rates = $('ratesText').value.split(',').map(x=>parseFloat(x.trim()));
+  const slabs=[]; for(let i=0;i<limits.length;i++){ slabs.push({limit:limits[i],rate:rates[i]||0}); }
+  slabs.push({limit:Infinity, rate:rates[limits.length]||0.30});
+  return slabs;
 }
 
-function computeTaxOnAmount(taxable, slabs){
-  let remaining = taxable; let tax = 0;
-  for(let i=0;i<slabs.length;i++){
-    const band = slabs[i];
-    const bandAmt = Math.min(remaining, band.limit);
-    if(bandAmt<=0) continue;
-    tax += bandAmt * band.rate;
-    remaining -= bandAmt;
-  }
-  return tax;
+function computeTaxOnAmount(taxable, slabs){ let remaining=taxable, tax=0; for(let i=0;i<slabs.length;i++){ const b=slabs[i]; if(remaining<=0) break; const amt=Math.min(remaining,b.limit); tax += amt * (b.rate||0); remaining -= amt; } return tax; }
+
+function prorateMonths(){ return {months_juljan:7, months_febjun:5}; }
+
+function distributeMonthly(total, months){ // distributes rounding so sum matches total
+  const base = Math.floor(total/months);
+  const arr = Array(months).fill(base);
+  let rem = Math.round(total - base*months);
+  for(let i=0;i<months && rem>0;i++){ arr[i]++; rem--; }
+  return arr;
 }
 
-function runCalc(){
-  const slabs = loadSlabs();
-  const gross_juljan = Number(document.getElementById('gross_juljan').value||0);
-  const gross_febjun = Number(document.getElementById('gross_febjun').value||0);
-  const salary_13th = Number(document.getElementById('salary_13th').value||0);
-  const bonus_feb = Number(document.getElementById('bonus_feb').value||0);
-  const employer_pf_pct = Number(document.getElementById('employer_pf_pct').value||0)/100;
-  const employee_pf_pct = Number(document.getElementById('employee_pf_pct').value||0)/100;
-  const planned_investment = Number(document.getElementById('planned_investment').value||0);
-  const inv_dps = Number(document.getElementById('inv_dps').value||0);
-  const inv_share = Number(document.getElementById('inv_share').value||0);
-  const inv_other = Number(document.getElementById('inv_other').value||0);
+function generateMonthlyRows(monthsArr){ // monthsArr: array of objects with gross, empPF, emplrPF, tax, net
+  const tbody = $('monthTable').querySelector('tbody'); tbody.innerHTML='';
+  const names = ['Jul','Aug','Sep','Oct','Nov','Dec','Jan','Feb','Mar','Apr','May','Jun'];
+  for(let i=0;i<12;i++){ const r=monthsArr[i]||{gross:0,empPF:0,emplrPF:0,tax:0,net:0}; const tr=document.createElement('tr'); tr.innerHTML=`<td>${names[i]}</td><td>Tk ${fmt(r.gross)}</td><td>Tk ${fmt(r.empPF)}</td><td>Tk ${fmt(r.emplrPF)}</td><td>Tk ${fmt(r.tax)}</td><td>Tk ${fmt(r.net)}</td>`; tbody.appendChild(tr);} }
 
-  const months_juljan = 7, months_febjun = 5;
+function calcAll(){
+  // read inputs
+  const gross_juljan = toNum($('gross_juljan').value);
+  const gross_febjun = toNum($('gross_febjun').value);
+  const salary_13th = toNum($('salary_13th').value);
+  const bonus_feb = toNum($('bonus_feb').value);
+  const employer_pf_pct = toNum($('employer_pf_pct').value)/100;
+  const employee_pf_pct = toNum($('employee_pf_pct').value)/100;
+  const planned_investment = toNum($('planned_investment').value);
+  const inv_dps = toNum($('inv_dps').value), inv_share = toNum($('inv_share').value), inv_other = toNum($('inv_other').value);
+  const {months_juljan, months_febjun} = prorateMonths();
+  const slabs = loadSlabsAndRates();
+
+  // incomes
   const income_juljan = gross_juljan * months_juljan;
   const income_febjun = gross_febjun * months_febjun;
   const income_basic_total = income_juljan + income_febjun;
 
-  // Employer PF and Employee PF totals (year)
+  // PF totals
   const employer_pf_juljan = gross_juljan * employer_pf_pct * months_juljan;
   const employer_pf_febjun = gross_febjun * employer_pf_pct * months_febjun;
-  const employer_pf_total = employer_pf_juljan + employer_pf_febjun;
-
+  const total_employer_pf = employer_pf_juljan + employer_pf_febjun;
   const employee_pf_juljan = gross_juljan * employee_pf_pct * months_juljan;
   const employee_pf_febjun = gross_febjun * employee_pf_pct * months_febjun;
-  const employee_pf_total = employee_pf_juljan + employee_pf_febjun;
+  const total_employee_pf = employee_pf_juljan + employee_pf_febjun;
 
-  // Total income considered for tax: INCLUDE employer PF, EXCLUDE employee PF
-  const total_income = income_basic_total + employer_pf_total + salary_13th + bonus_feb;
+  // total income for tax (include employer PF, exclude employee PF)
+  const total_income = income_basic_total + total_employer_pf + salary_13th + bonus_feb;
 
-  // Exemption
-  const exemption_limit = 500000; // default
-  const exemption = Math.min(total_income/3, exemption_limit);
+  // exemption
+  const exemption = Math.min(total_income/3, 500000);
   const taxable_income = Math.max(0, total_income - exemption);
 
-  // Gross tax using editable slabs
+  // gross tax
   const gross_tax = computeTaxOnAmount(taxable_income, slabs);
 
-  // Investment calculations: eligible investments include employee+employer PF + DPS + shares + other + planned_investment
+  // investments
   const total_user_invest = planned_investment + inv_dps + inv_share + inv_other;
-  const total_eligible_invest = total_user_invest + employee_pf_total + employer_pf_total; // both PF portions count as investment for rebate
-
+  const total_eligible_invest = total_user_invest + total_employee_pf + total_employer_pf; // both PF count
   const rebate_a = 0.03 * taxable_income;
   const rebate_b = 0.15 * total_eligible_invest;
   const rebate_cap = 1000000;
   const investment_rebate = Math.min(rebate_a, rebate_b, rebate_cap);
+  const net_tax = Math.max(0, Math.round(gross_tax - investment_rebate));
 
-  const net_tax = Math.max(0, gross_tax - investment_rebate);
-
-  // === Provisional calculation (Jul->Jan) ===
-  // Provisional uses gross_juljan assumed for full year and employer PF based on that. Employee PF is NOT included in income.
+  // provisional calculation (HR) — assume gross_juljan for full 12 months, employer PF based on that
   const provisional_income_basic12 = gross_juljan * 12;
   const provisional_employer_pf12 = gross_juljan * employer_pf_pct * 12;
-  const provisional_total_income = provisional_income_basic12 + provisional_employer_pf12 + salary_13th; // no bonus in provisional
-  const provisional_exemption = Math.min(provisional_total_income/3, exemption_limit);
+  const provisional_total_income = provisional_income_basic12 + provisional_employer_pf12 + salary_13th; // no bonus
+  const provisional_exemption = Math.min(provisional_total_income/3, 500000);
   const provisional_taxable = Math.max(0, provisional_total_income - provisional_exemption);
   const provisional_gross_tax = computeTaxOnAmount(provisional_taxable, slabs);
-
-  // Provisional rebate: use qualifying investment estimate where PF for 12 months for employee+employer (employee PF not added to income but counts for investment)
   const provisional_employee_pf12 = gross_juljan * employee_pf_pct * 12;
-  const provisional_employer_pf12_forinv = provisional_employer_pf12;
-  const provisional_total_eligible_invest = total_user_invest + provisional_employee_pf12 + provisional_employer_pf12_forinv;
+  const provisional_total_eligible_invest = planned_investment + inv_dps + inv_share + inv_other + provisional_employee_pf12 + provisional_employer_pf12;
   const provisional_rebate = Math.min(0.03*provisional_taxable, 0.15*provisional_total_eligible_invest, rebate_cap);
-  const provisional_net_tax = Math.max(0, provisional_gross_tax - provisional_rebate);
-
-  // HR monthly tax for full year (provisional) = provisional_net_tax/12 rounded to nearest Taka
-  const monthly_tax_provisional = Math.round(provisional_net_tax / 12);
-  // Tax actually deducted in Jul->Jan (7 months) using rounded monthly figure
+  const provisional_net_tax = Math.max(0, Math.round(provisional_gross_tax - provisional_rebate));
+  // monthly provisional (rounded) and tax collected Jul->Jan
+  const monthly_tax_provisional = Math.round(provisional_net_tax/12);
   const tax_deducted_juljan_total = monthly_tax_provisional * months_juljan;
 
-  // Final calculation after Feb (includes higher gross_febjun and bonus)
-  const final_net_tax = Math.round(net_tax); // round annual net tax to integer
-  const remaining_tax_to_collect = Math.max(0, final_net_tax - tax_deducted_juljan_total);
-  const monthly_tax_febjun = Math.round(remaining_tax_to_collect / months_febjun);
+  // remaining tax for Feb-Jun
+  let remaining_tax = Math.max(0, net_tax - tax_deducted_juljan_total);
+  // distribute remaining across 5 months with rounding
+  const monthsRemaining = months_febjun;
+  const febToJun = distributeMonthly(remaining_tax, monthsRemaining);
 
-  // Monthly employer & employee PF
-  const monthly_employer_pf_juljan = gross_juljan * employer_pf_pct;
-  const monthly_employer_pf_febjun = gross_febjun * employer_pf_pct;
-  const monthly_employee_pf_juljan = gross_juljan * employee_pf_pct;
-  const monthly_employee_pf_febjun = gross_febjun * employee_pf_pct;
+  // provisional monthly array for first 7 months
+  const julToJan = Array(months_juljan).fill(monthly_tax_provisional);
 
-  // Net to bank per month: gross - employee PF (this is taken first) - monthly tax (next)
-  const monthly_net_bank_juljan = gross_juljan - Math.round(monthly_employee_pf_juljan) - monthly_tax_provisional;
-  const monthly_net_bank_febjun = gross_febjun - Math.round(monthly_employee_pf_febjun) - monthly_tax_febjun;
+  // monthly PF amounts
+  const monthly_employee_pf_juljan = Math.round(gross_juljan * employee_pf_pct);
+  const monthly_employee_pf_febjun = Math.round(gross_febjun * employee_pf_pct);
+  const monthly_employer_pf_juljan = Math.round(gross_juljan * employer_pf_pct);
+  const monthly_employer_pf_febjun = Math.round(gross_febjun * employer_pf_pct);
 
-  // Totals
-  const total_tax_deducted = tax_deducted_juljan_total + (monthly_tax_febjun * months_febjun);
-  const total_employee_pf = employee_pf_total;
-  const total_employer_pf = employer_pf_total;
+  // Build months rows Jul->Jun
+  const monthsArr = [];
+  // Jul-Jan
+  for(let i=0;i<months_juljan;i++){
+    const gross = gross_juljan;
+    const empPF = monthly_employee_pf_juljan;
+    const emplrPF = monthly_employer_pf_juljan;
+    const tax = julToJan[i];
+    const net = gross - empPF - tax;
+    monthsArr.push({gross,empPF,emplrPF,tax,net});
+  }
+  // Feb-Jun
+  for(let i=0;i<months_febjun;i++){
+    const gross = gross_febjun;
+    const empPF = monthly_employee_pf_febjun;
+    const emplrPF = monthly_employer_pf_febjun;
+    const tax = febToJun[i];
+    const net = gross - empPF - tax;
+    monthsArr.push({gross,empPF,emplrPF,tax,net});
+  }
 
-  // Investment top-up needed to reach rebate_a via 15% rule
-  const required_invest_for_rebateA = rebate_a / 0.15; // amount of qualifying investment required
-  const topup_needed = Math.max(0, required_invest_for_rebateA - total_eligible_invest);
+  // Render topupBox as per requested format and order
+  const required_invest_for_rebateA = Math.round(rebate_a/0.15 * 0.15 / 0.15); // keep as rebate_a/0.15 but avoid float oddities
+  // simpler: required qualifying investment to meet rebate_a via 15% rule = rebate_a / 0.15
+  const requiredQualInvest = Math.round(rebate_a / 0.15);
+  const topup_needed = Math.max(0, requiredQualInvest - total_eligible_invest);
 
-  // Render summary
-
-  // ===== Top‑up summary box =====
-  document.getElementById('topupBox').innerHTML = `
-    <div style="margin-bottom:10px"><b>Required qualifying investment:</b> Tk ${format(Math.round(required_invest_for_rebateA))}</div>
-    <div style="margin-bottom:10px"><b>Planned personal investment:</b> Tk ${format(planned_investment)}</div>
-    <div style="margin-bottom:10px"><b>Total PF counted as investment:</b> Tk ${format(total_employee_pf + total_employer_pf)}</div>
-    <div style="margin-bottom:10px"><b>Excluding Employee + Employer PF:</b> Tk ${format(Math.round(required_invest_for_rebateA - (total_employee_pf + total_employer_pf)))} </div>
-    <div style="margin-bottom:10px"><b>Other investments (DPS + Share + Other):</b> Tk ${format(inv_dps + inv_share + inv_other)}</div>
-    <div style="margin-bottom:10px"><b>Total eligible investment:</b> Tk ${format(total_eligible_invest)}</div>
-    <div><b style="color:#c30000">Additional top-up needed:</b> <span style="color:#c30000;font-weight:700">Tk ${format(Math.round(topup_needed))}</span></div>
+  $('topupBox').innerHTML = `
+    <div style="padding:8px 4px"><strong>Required qualifying investment:</strong> Tk ${fmt(requiredQualInvest)}</div>
+    <div style="padding:8px 4px"><strong>Planned personal investment:</strong> Tk ${fmt(planned_investment)}</div>
+    <div style="padding:8px 4px"><strong>Total PF counted as investment:</strong> Tk ${fmt(total_employee_pf + total_employer_pf)}</div>
+    <div style="padding:8px 4px"><strong>Excluding Employee + Employer PF:</strong> Tk ${fmt(Math.max(0, requiredQualInvest - (total_employee_pf + total_employer_pf)))}</div>
+    <div style="padding:8px 4px"><strong>Other investments (DPS + Share + Other):</strong> Tk ${fmt(inv_dps + inv_share + inv_other)}</div>
+    <div style="padding:8px 4px"><strong>Total eligible investment:</strong> Tk ${fmt(total_eligible_invest)}</div>
+    <div style="padding:8px 4px"><strong style="color:${topup_needed>0? 'var(--danger)': 'green'}">Additional top-up needed:</strong> <span style="font-weight:700;color:${topup_needed>0? 'var(--danger)': 'green'}">Tk ${fmt(topup_needed)}</span></div>
   `;
-  document.getElementById('results').style.display = 'block';
-  document.getElementById('summary').innerHTML = `
-    <strong>Total income (12m salary + employer PF + 13th + bonus):</strong> Tk ${format(total_income)}<br>
-    <strong>Exemption applied:</strong> Tk ${format(exemption)}<br>
-    <strong>Taxable income:</strong> Tk ${format(taxable_income)}<br>
-    <strong>Gross tax (before rebate):</strong> Tk ${format(gross_tax)}<br>
-    <strong>Investment rebate applied (est):</strong> Tk ${format(investment_rebate)}<br>
-    <strong>Net annual tax (final):</strong> Tk ${format(net_tax)}
+
+  // Summary
+  $('summary').innerHTML = `
+    <div><strong>Total income (12m salary + employer PF + 13th + bonus):</strong> Tk ${fmt(total_income)}</div>
+    <div><strong>Exemption applied:</strong> Tk ${fmt(exemption)}</div>
+    <div><strong>Taxable income:</strong> Tk ${fmt(taxable_income)}</div>
+    <div><strong>Gross tax (before rebate):</strong> Tk ${fmt(Math.round(gross_tax))}</div>
+    <div><strong>Investment rebate applied (est):</strong> Tk ${fmt(Math.round(investment_rebate))}</div>
+    <div><strong>Net annual tax (final):</strong> Tk ${fmt(net_tax)}</div>
   `;
 
-  // Render detailed table
-  const table = document.getElementById('table');
-  table.innerHTML = `
-    <tr><th>Item</th><th>Jul→Jan (7m)</th><th>Feb→Jun (5m)</th><th>Annual / Notes</th></tr>
-    <tr><td>Monthly gross</td><td>Tk ${format(gross_juljan)}</td><td>Tk ${format(gross_febjun)}</td><td>—</td></tr>
-    <tr><td>Months</td><td>7</td><td>5</td><td>12</td></tr>
-    <tr><td>Total gross (period)</td><td>Tk ${format(income_juljan)}</td><td>Tk ${format(income_febjun)}</td><td>Tk ${format(income_basic_total)}</td></tr>
-    <tr><td>Monthly employer PF</td><td>Tk ${format(Math.round(monthly_employer_pf_juljan))}</td><td>Tk ${format(Math.round(monthly_employer_pf_febjun))}</td><td>Employer PF total Tk ${format(total_employer_pf)}</td></tr>
-    <tr><td>Employer PF total (period)</td><td>Tk ${format(Math.round(employer_pf_juljan))}</td><td>Tk ${format(Math.round(employer_pf_febjun))}</td><td>Tk ${format(total_employer_pf)}</td></tr>
-    <tr><td>Monthly employee PF (deducted)</td><td>Tk ${format(Math.round(monthly_employee_pf_juljan))}</td><td>Tk ${format(Math.round(monthly_employee_pf_febjun))}</td><td>Employee PF total Tk ${format(total_employee_pf)}</td></tr>
-    <tr><td>Monthly tax deducted</td><td>Tk ${format(monthly_tax_provisional)}</td><td>Tk ${format(monthly_tax_febjun)}</td><td>Provisional monthly Tk ${format(monthly_tax_provisional)}</td></tr>
-    <tr><td>Tax total deducted / to be deducted</td><td>Tk ${format(tax_deducted_juljan_total)}</td><td>Tk ${format(Math.round(remaining_tax_to_collect))}</td><td>Final net tax Tk ${format(net_tax)}</td></tr>
-    <tr><td>Net salary (goes to bank) — per month</td><td>Tk ${format(monthly_net_bank_juljan)}</td><td>Tk ${format(monthly_net_bank_febjun)}</td><td>13th Tk ${format(salary_13th)}; Bonus Tk ${format(bonus_feb)}</td></tr>
-    <tr><td>Total tax actually (year)</td><td colspan="2">Tk ${format(Math.round(total_tax_deducted))}</td><td>Final net tax Tk ${format(net_tax)}</td></tr>
-    <tr><td>Investment rebate components</td><td colspan="2">3% of taxable Tk ${format(Math.round(rebate_a))} • 15% of qualifying investment Tk ${format(Math.round(0.15*total_eligible_invest))} • Cap Tk ${format(rebate_cap)}</td><td>Claimable rebate Tk ${format(Math.round(investment_rebate))}</td></tr>
-    <tr><td>Qualifying investments (incl. PF)</td><td colspan="3">Employee PF Tk ${format(total_employee_pf)} • Employer PF Tk ${format(total_employer_pf)} • DPS Tk ${format(inv_dps)} • Share Tk ${format(inv_share)} • Other Tk ${format(inv_other)} • Planned declared Tk ${format(planned_investment)} = <b>Tk ${format(total_eligible_invest)}</b></td></tr>
-    <tr><td>Top-up required to reach full rebate</td><td colspan="3">To satisfy 3% of taxable income via 15% rule you need qualifying investment ≈ Tk ${format(Math.round(required_invest_for_rebateA))}. Your current qualifying investment Tk ${format(total_eligible_invest)}. <b>Top-up needed Tk ${format(Math.round(topup_needed))}</b></td></tr>
-  `;
+  generateMonthlyRows(monthsArr);
+
+  // Save this calc to history (multi-year) — use fiscal year string
+  const now = new Date(); const fyLabel = (now.getFullYear()) + '-' + (now.getFullYear()+1);
+  const history = JSON.parse(localStorage.getItem('bd_history')||'[]');
+  history.unshift({ts:Date.now(),fy:fyLabel,inputs:{gross_juljan,gross_febjun,salary_13th,bonus_feb,employer_pf_pct,employee_pf_pct,planned_investment,inv_dps,inv_share,inv_other},results:{total_income,taxable_income,gross_tax,investment_rebate,net_tax}});
+  localStorage.setItem('bd_history', JSON.stringify(history.slice(0,20)));
 }
 
-document.getElementById('calc').addEventListener('click', runCalc);
-document.getElementById('reset').addEventListener('click', ()=>location.reload());
+$('calc').addEventListener('click', calcAll);
+$('printBtn').addEventListener('click', ()=>{ window.print(); });
+
+// CSV export
+$('exportCsv').addEventListener('click', ()=>{
+  const rows = [];
+  const tbody = $('monthTable').querySelectorAll('tbody tr');
+  rows.push(['Month','Gross','Employee PF','Employer PF','Tax','Net']);
+  tbody.forEach(tr=>{ const cols = tr.querySelectorAll('td'); rows.push(Array.from(cols).map(c=>c.textContent.replace(/,/g,''))); });
+  const csv = rows.map(r=>r.join(',')).join('\n');
+  const blob = new Blob([csv],{type:'text/csv'}); const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='taxsheet.csv'; a.click(); URL.revokeObjectURL(url);
+});
+
+// Auto load example values from localStorage if exist
+(function loadInputs(){ const s = JSON.parse(localStorage.getItem('bd_inputs')||'{}'); for(let k in s) if($(k)) $(k).value=s[k]; })();
+// Save inputs on change
+['gross_juljan','gross_febjun','salary_13th','bonus_feb','employer_pf_pct','employee_pf_pct','planned_investment','inv_dps','inv_share','inv_other'].forEach(id=>{ if($(id)) $(id).addEventListener('change', ()=>{ const s=JSON.parse(localStorage.getItem('bd_inputs')||'{}'); s[id] = $(id).value; localStorage.setItem('bd_inputs', JSON.stringify(s)); }); });
+
+// initial calc
+calcAll();
 </script>
 </body>
 </html>
