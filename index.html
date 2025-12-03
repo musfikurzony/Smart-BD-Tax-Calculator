@@ -217,12 +217,13 @@ function runCalc(){
 
   // ===== Top‑up summary box =====
   document.getElementById('topupBox').innerHTML = `
-    <b>Required qualifying investment:</b> Tk ${format(planned_investment)}<br>
-    <b>Total PF counted as investment:</b> Tk ${format(total_employee_pf + total_employer_pf)}<br>
-    <b>Other investments (DPS + Share + Other):</b> Tk ${format(inv_dps + inv_share + inv_other)}<br><br>
-    <b>Total eligible investment:</b> Tk ${format(total_eligible_invest)}<br>
-    <b>Required qualifying investment:</b> Tk ${format(Math.round(required_invest_for_rebateA))}<br>
-    <b style="color:#c30000">Additional top‑up needed:</b> <span style="color:#c30000;font-weight:700">Tk ${format(Math.round(topup_needed))}</span>
+    <div style="margin-bottom:10px"><b>Required qualifying investment:</b> Tk ${format(Math.round(required_invest_for_rebateA))}</div>
+    <div style="margin-bottom:10px"><b>Planned personal investment:</b> Tk ${format(planned_investment)}</div>
+    <div style="margin-bottom:10px"><b>Total PF counted as investment:</b> Tk ${format(total_employee_pf + total_employer_pf)}</div>
+    <div style="margin-bottom:10px"><b>Excluding Employee + Employer PF:</b> Tk ${format(Math.round(required_invest_for_rebateA - (total_employee_pf + total_employer_pf)))} </div>
+    <div style="margin-bottom:10px"><b>Other investments (DPS + Share + Other):</b> Tk ${format(inv_dps + inv_share + inv_other)}</div>
+    <div style="margin-bottom:10px"><b>Total eligible investment:</b> Tk ${format(total_eligible_invest)}</div>
+    <div><b style="color:#c30000">Additional top-up needed:</b> <span style="color:#c30000;font-weight:700">Tk ${format(Math.round(topup_needed))}</span></div>
   `;
   document.getElementById('results').style.display = 'block';
   document.getElementById('summary').innerHTML = `
